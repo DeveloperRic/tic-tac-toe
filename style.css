@@ -1,0 +1,26 @@
+:root {
+  --text-color: #bdbdbd
+}
+
+body {
+  background-color: #212121;
+}
+
+/* @media only screen and (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+} */
+
+.divider {
+  background-color: var(--text-color);
+}
+
+.square {
+  color: var(--text-color);
+  font-size: 10rem;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+}

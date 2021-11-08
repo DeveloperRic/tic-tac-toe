@@ -1,0 +1,15 @@
+{
+  "name": "tic-tac-toe",
+  "version": "1.0.0",
+  "description": "Play tic tac toe in your browser",
+  "keywords": [
+    "tic",
+    "tac",
+    "toe"
+  ],
+  "author": {
+    "name": "Victor Olaitan",
+    "url": "https://victorolaitan.xyz"
+  },
+  "license": "MIT"
+}
