@@ -394,8 +394,12 @@ class Game {
     if (wins.length != 0 || gridFull) {
       this._setConfirmReset('Restart game?')
       setTimeout(() => {
-        if (wins.length != 0) alert(`You ${newChar == this.charToPlay ? 'won' : 'lost'} the game 🤯😭`)
-        else alert('Nobody won :(')
+        if (wins.length != 0) {
+          const won = newChar == this.charToPlay
+          alert(`You ${won ? 'won' : 'lost'} the game ${won ? '🎉' : '🤯😭'}`)
+        } else {
+          alert('Nobody won :(')
+        }
       })
       return
     }
