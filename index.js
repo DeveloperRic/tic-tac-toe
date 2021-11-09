@@ -96,33 +96,47 @@ class Agent {
       tree.nextPlay = tree.prevPlay
       return
     }
+    /** @type {AgentTree[]} */
+    const mostDesireableTrees = []
+    /** @type {(subtree: AgentTree) => boolean} */
+    const isDesireable = subtree => {
+      const desireableTree = mostDesireableTrees[0]
+      if (!desireableTree) return true // list is empty
+      return minimise
+        ? subtree.alpha <= desireableTree.alpha
+        : subtree.beta >= desireableTree.beta
+    }
+    /** @type {(subtree: AgentTree) => void} */
+    const saveDesireableTree = subtree => {
+      const desireableTree = mostDesireableTrees[0]
+      if (desireableTree) {
+        const isBetter = minimise
+          ? subtree.alpha < desireableTree.alpha
+          : subtree.beta > desireableTree.beta
+        if (isBetter) mostDesireableTrees.length = 0
+      }
+      mostDesireableTrees.push(subtree)
+    }
     for (const subtree of tree.children) {
       this._pruneTree(subtree, tree, !minimise)
-      if (minimise) {
-        const childIsBetter = subtree.alpha < tree.beta
-        const childIsEqual = subtree.alpha == tree.beta
-        if (childIsBetter || (childIsEqual && Math.random() >= 0.5)) {
-          tree.beta = subtree.alpha
-          tree.nextPlay = subtree.prevPlay
-        }
-      } else {
-        const childIsBetter = subtree.beta > tree.alpha
-        const childIsEqual = subtree.beta == tree.alpha
-        if (childIsBetter || (childIsEqual && Math.random() >= 0.5)) {
-          tree.alpha = subtree.beta
-          tree.nextPlay = subtree.prevPlay
-        }
-      }
-      if (parent) {
-        if (minimise) {
-          if (tree.beta <= parent.alpha) break
-        } else {
-          if (tree.alpha >= parent.beta) break
+      if (isDesireable(subtree)) {
+        saveDesireableTree(subtree)
+        if (parent) {
+          if (minimise) {
+            if (subtree.beta <= parent.alpha) break
+          } else {
+            if (subtree.alpha >= parent.beta) break
+          }
         }
       }
     }
-    if (minimise) tree.alpha = tree.beta
-    else tree.beta = tree.alpha
+    const selectedTree = mostDesireableTrees[Math.floor(Math.random() * mostDesireableTrees.length)]
+    if (minimise) {
+      tree.alpha = tree.beta = selectedTree.alpha
+    } else {
+      tree.beta = tree.alpha = selectedTree.beta
+    }
+    tree.nextPlay = selectedTree.prevPlay
   }
 
   /**
@@ -141,12 +155,10 @@ class Agent {
         },
         { x: 0, o: 0 }
       )
-      if (counts.x > 0 && counts.o == 0) xScore += counts.x
-      if (counts.x == 3) xScore += 2
-      if (counts.o > 0 && counts.x == 0) oScore += counts.o
-      if (counts.o == 3) oScore += 2
+      if (counts.o == 0) xScore += counts.x
+      if (counts.x == 0) oScore += counts.o
     }
-    return this.opponentChar == 'x' ? xScore : oScore
+    return this.opponentChar == 'x' ? xScore - oScore : oScore - xScore
   }
 }
 
@@ -366,8 +378,7 @@ class Game {
     )
     /** @type {Agent} */
     this.agent = undefined
-    this.reset(false)
-    this._setConfirmReset('Start game?')
+    this.reset()
   }
 
   _randomChar() {
@@ -388,23 +399,33 @@ class Game {
   _onSquareChanged(newChar) {
     const grid = this.canvas.grid
     const wins = this._searchForWins(grid)
-    const gridFull = grid.every(gridRow =>
-      gridRow.every(square => square.char != '')
-    )
-    if (wins.length != 0 || gridFull) {
+    const squaresLeft = grid.reduce((total, row) => {
+      return total + row.reduce((total, sq) => sq.char == '' ? total + 1 : total, 0)
+    }, 0)
+    if (wins.length != 0 || squaresLeft == 0) {
       this._setConfirmReset('Restart game?')
       setTimeout(() => {
         if (wins.length != 0) {
           const won = newChar == this.charToPlay
           alert(`You ${won ? 'won' : 'lost'} the game ${won ? '🎉' : '🤯😭'}`)
         } else {
-          alert('Nobody won :(')
+          // Nobody won :(
         }
       })
       return
     }
-    if (newChar != this.agent.agentChar) {
+    const isAgentsTurn = newChar != this.agent.agentChar
+    if (isAgentsTurn) {
       this.agent.play(grid)
+    } else if (squaresLeft == 1) {
+      for (const row of grid) {
+        for (const sq of row) {
+          if (sq.char == '') {
+            sq.play(this._getCharToPlay())
+            return
+          }
+        }
+      }
     }
   }
 
@@ -440,7 +461,7 @@ class Game {
     }
   }
 
-  reset(start = false) {
+  reset() {
     this.charToPlay = this._randomChar()
     this.agent = new Agent(
       this.charToPlay == 'x' ? 'o' : 'x',
@@ -452,6 +473,5 @@ class Game {
     }
     this.canvas.reset()
     this.body.appendChild(this.canvas.html)
-    if (start) alert(`Flipping coin.... Done. ${this.charToPlay} plays first`)
   }
 }
